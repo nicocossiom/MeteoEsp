@@ -53,9 +53,12 @@ data class Pronostico(
 data class DiaPronostico(
     @SerializedName("estado_cielo") val estadoCielo: List<String>?,
     @SerializedName("precipitacion") val precipitacion: List<String>?,
+    @JsonAdapter(ListOrStringDeserializer::class)
     @SerializedName("prob_precipitacion") val probPrecipitacion: List<String>?,
+    @JsonAdapter(ListOrStringDeserializer::class)
     @SerializedName("prob_tormenta") val probTormenta: List<String>?,
     @SerializedName("nieve") val nieve: List<String>?,
+    @JsonAdapter(ListOrStringDeserializer::class)
     @SerializedName("prob_nieve") val probNieve: List<String>?,
     @SerializedName("temperatura") val temperatura: List<String>?,
     @SerializedName("sens_termica") val sensTermica: List<String>?,

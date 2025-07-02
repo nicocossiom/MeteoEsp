@@ -3,6 +3,7 @@ package com.mssdepas.meteoesp.data.remote
 import com.mssdepas.meteoesp.data.model.Municipio
 import retrofit2.http.GET
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface TiempoNetApiService {
 
@@ -13,6 +14,9 @@ interface TiempoNetApiService {
     suspend fun getMunicipios(
         @Path("codProv") codProv: String
     ): MunicipiosResponse
+
+    @GET("json/v2/municipios")
+    suspend fun getMunicipio(@Query("nombre") nombre: String): MunicipiosResponse
 
     @GET("json/v2/provincias/{codProv}/municipios/{id}")
     suspend fun getWeather(

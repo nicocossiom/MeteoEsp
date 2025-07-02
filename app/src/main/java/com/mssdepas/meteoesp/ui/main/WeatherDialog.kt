@@ -14,14 +14,10 @@ fun WeatherDialog(
 ) = AlertDialog(
     onDismissRequest = onDismiss,
     confirmButton = {
-        TextButton(onClick = onDismiss) { Text("OK") }
+        TextButton(onClick = onDismiss) { Text("Cerrar") }
     },
-    title = { Text("Ahora mismo") },
+    title = { Text(w.municipio?.nombre ?: "Tiempo") },
     text = {
-        Column {
-            Text("🌡️ Temperatura: ${w.temperaturaActual ?: "--"} ºC")
-            Text("☁️ Cielo: ${w.estadoCielo?.descripcion ?: "--"}")
-            Text("💧 Humedad: ${w.humedad ?: "--"} %")
-        }
+        WeatherCard(weather = w)
     }
 )
