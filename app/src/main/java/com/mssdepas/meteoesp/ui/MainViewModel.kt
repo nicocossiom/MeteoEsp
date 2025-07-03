@@ -3,7 +3,6 @@ package com.mssdepas.meteoesp.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.mssdepas.meteoesp.MainActivity
 import com.mssdepas.meteoesp.data.local.FavoritesRepository
 import com.mssdepas.meteoesp.data.model.Municipio
 import com.mssdepas.meteoesp.data.model.Provincia
@@ -35,8 +34,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _provincias = MutableStateFlow<List<Provincia>>(emptyList())
     private val _municipios = MutableStateFlow<List<Municipio>>(emptyList())
 
-    private val _uiItems = MutableStateFlow<List<UiItem>>(emptyList())
-    val uiItems: StateFlow<List<UiItem>> = _uiItems.asStateFlow()
+    private val _selectedProvincia = MutableStateFlow<Provincia?>(null)
+    val selectedProvincia: StateFlow<Provincia?> = _selectedProvincia.asStateFlow()
+
+    private val _selectedMunicipio = MutableStateFlow<Municipio?>(null)
+    val selectedMunicipio: StateFlow<Municipio?> = _selectedMunicipio.asStateFlow()
+
+    private val _provinciasFiltradas = MutableStateFlow<List<Provincia>>(emptyList())
+    val provinciasFiltradas: StateFlow<List<Provincia>> = _provinciasFiltradas.asStateFlow()
+
+    private val _municipiosFiltrados = MutableStateFlow<List<Municipio>>(emptyList())
+    val municipiosFiltrados: StateFlow<List<Municipio>> = _municipiosFiltrados.asStateFlow()
+
+    private val _showFavoritesManager = MutableStateFlow(false)
+    val showFavoritesManager: StateFlow<Boolean> = _showFavoritesManager.asStateFlow()
+
+    private val _favoriteMunicipios = MutableStateFlow<List<Municipio>>(emptyList())
+    val favoriteMunicipios: StateFlow<List<Municipio>> = _favoriteMunicipios.asStateFlow()
 
     private val _selectedWeather = MutableStateFlow<WeatherResponse?>(null)
     val selectedWeather: StateFlow<WeatherResponse?> = _selectedWeather.asStateFlow()
@@ -53,10 +67,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _favoriteWeathers = MutableStateFlow<List<WeatherResponse>>(emptyList())
     val favoriteWeathers: StateFlow<List<WeatherResponse>> = _favoriteWeathers.asStateFlow()
 
-    private val _searchMode = MutableStateFlow(SearchMode.AMBOS)
-    val searchMode: StateFlow<SearchMode> = _searchMode.asStateFlow()
-
-    private var _selectedProvincia: Provincia? = null
+    private val _selectedProvinciaWeather = MutableStateFlow<WeatherResponse?>(null)
+    val selectedProvinciaWeather: StateFlow<WeatherResponse?> = _selectedProvinciaWeather.asStateFlow()
 
     private var lastQuery = ""
 
@@ -84,10 +96,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             combine(_municipios, favoritesRepository.favorites) { municipios, favIds ->
                 Pair(municipios, favIds)
             }.collect { (municipios, _) ->
-                updateUiItems()
                 fetchFavoriteWeathers(municipios)
+                updateFavoriteMunicipios(municipios)
             }
         }
+    }
+
+    private fun updateFavoriteMunicipios(allMunicipios: List<Municipio>) {
+        _favoriteMunicipios.value = favoritesRepository.getFavoriteMunicipios(allMunicipios)
     }
 
     private suspend fun fetchFavoriteWeathers(allMunicipios: List<Municipio>) {
@@ -108,7 +124,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         try {
             val provs = api.getProvincias().provincias
             _provincias.value = provs
-            updateUiItems()
+            _provinciasFiltradas.value = provs
 
             val allMuns = mutableListOf<Municipio>()
             provs.forEach { prov ->
@@ -122,12 +138,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _municipios.value = allMuns
             // Initial fetch, will be re-triggered by observer if needed
             fetchFavoriteWeathers(allMuns)
-            updateUiItems() // Update again with municipios
+            updateFavoriteMunicipios(allMuns)
         } catch (e: Exception) {
             AppLogger.e("Error cargando provincias:\n${e.message}", throwable = e)
         }
     }
-
 
     private fun fetchCurrentLocationWeather() = viewModelScope.launch {
         _isLoadingCurrentLocation.value = true
@@ -148,7 +163,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
                 } catch (e: Exception) {
                     AppLogger.e("Error fetching weather for current location", throwable = e)
-                    _locationError.value = "No se pudo obtener el tiempo para la ubicación encontrada."
+                    _locationError.value = "No se pudo obtener el tiempo para la ubicación encontrada '${municipalityName}'."
                 }
             } else {
                 AppLogger.w("Could not get municipality name from location.")
@@ -167,49 +182,120 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             ?: throw IllegalArgumentException("Municipio no encontrado: $municipalityName")
     }
 
-    fun setSearchMode(mode: SearchMode) {
-        _searchMode.value = mode
-        _selectedProvincia = null // Reset provincia selection when changing mode
-        updateUiItems()
+    // Combo box methods
+    fun filterProvincias(query: String) {
+        _provinciasFiltradas.value = if (query.isBlank()) {
+            _provincias.value
+        } else {
+            _provincias.value.filter { it.nombre.contains(query, ignoreCase = true) }
+        }
     }
 
-    fun onProvinciaClicked(p: Provincia) {
-        _selectedProvincia = p
-        updateUiItems()
+    fun selectProvincia(provincia: Provincia) {
+        _selectedProvincia.value = provincia
+        _selectedMunicipio.value = null
+        _selectedProvinciaWeather.value = null
+        updateMunicipiosFiltrados("")
+        // Load weather for the capital or first municipality of the province
+        loadWeatherForProvincia(provincia)
     }
 
-    fun onBackToProvincias() {
-        _selectedProvincia = null
-        updateUiItems()
-    }
+    private fun loadWeatherForProvincia(provincia: Provincia) = viewModelScope.launch {
+        try {
+            // Get the first municipality of the province (usually the capital)
+            val municipiosProvincia = _municipios.value.filter { it.codProv == provincia.id }
+            val firstMunicipio = municipiosProvincia.firstOrNull()
 
-    private fun updateUiItems() {
-        val provItems = _provincias.value
-            .filter { it.nombre.contains(lastQuery, true) }
-            .map { UiItem.Prov(it) }
-
-        val munItems = _municipios.value
-            .filter { it.nombre.contains(lastQuery, true) }
-            .map { UiItem.Mun(it, favoritesRepository.isFavorite(it)) }
-
-        _uiItems.value = when {
-            _selectedProvincia != null -> {
-                _municipios.value
-                    .filter { it.codProv == _selectedProvincia!!.id && it.nombre.contains(lastQuery, true) }
-                    .map { UiItem.Mun(it, favoritesRepository.isFavorite(it)) }
+            if (firstMunicipio != null) {
+                val id5 = firstMunicipio.codigoINE.take(5)
+                _selectedProvinciaWeather.value = api.getWeather(firstMunicipio.codProv, id5)
+                AppLogger.i("Successfully fetched weather for province ${provincia.nombre}: ${firstMunicipio.nombre}")
             }
-            else -> when (_searchMode.value) {
-                SearchMode.PROVINCIA -> provItems
-                SearchMode.MUNICIPIO -> munItems
-                SearchMode.AMBOS -> (provItems + munItems).sortedByName()
+        } catch (e: Exception) {
+            AppLogger.e("Error fetching weather for province ${provincia.nombre}", throwable = e)
+        }
+    }
+
+    fun addProvinciaToFavorites() {
+        val provincia = _selectedProvincia.value
+        if (provincia != null) {
+            // Add the first municipality of the province to favorites
+            val municipiosProvincia = _municipios.value.filter { it.codProv == provincia.id }
+            val firstMunicipio = municipiosProvincia.firstOrNull()
+            if (firstMunicipio != null && !favoritesRepository.isFavorite(firstMunicipio)) {
+                favoritesRepository.toggleFavorite(firstMunicipio)
             }
         }
     }
 
-    /** Called from UI when query changes */
-    fun filter(query: String) {
-        lastQuery = query
-        updateUiItems()
+    fun filterMunicipios(query: String) {
+        updateMunicipiosFiltrados(query)
+    }
+
+    private fun updateMunicipiosFiltrados(query: String) {
+        val provinciaSeleccionada = _selectedProvincia.value
+        if (provinciaSeleccionada != null) {
+            val municipiosProvincia = _municipios.value.filter { it.codProv == provinciaSeleccionada.id }
+            _municipiosFiltrados.value = if (query.isBlank()) {
+                municipiosProvincia
+            } else {
+                municipiosProvincia.filter { it.nombre.contains(query, ignoreCase = true) }
+            }
+        } else {
+            _municipiosFiltrados.value = emptyList()
+        }
+    }
+
+    fun selectMunicipio(municipio: Municipio) {
+        _selectedMunicipio.value = municipio
+    }
+
+    fun clearProvinciaSelection() {
+        _selectedProvincia.value = null
+        _selectedMunicipio.value = null
+        _municipiosFiltrados.value = emptyList()
+    }
+
+    fun clearMunicipioSelection() {
+        _selectedMunicipio.value = null
+    }
+
+    // Action buttons
+    fun loadWeatherForSelected() = viewModelScope.launch {
+        val municipio = _selectedMunicipio.value
+        if (municipio != null) {
+            loadWeather(municipio)
+        }
+    }
+
+    fun addSelectedToFavorites() {
+        val municipio = _selectedMunicipio.value
+        if (municipio != null && !favoritesRepository.isFavorite(municipio)) {
+            favoritesRepository.toggleFavorite(municipio)
+        }
+    }
+
+    // Favorites management
+    fun showFavoritesManager() {
+        _showFavoritesManager.value = true
+    }
+
+    fun hideFavoritesManager() {
+        _showFavoritesManager.value = false
+    }
+
+    fun removeFavorite(municipio: Municipio) {
+        favoritesRepository.toggleFavorite(municipio)
+    }
+
+    fun moveFavoriteUp(municipio: Municipio) {
+        // For simplicity, we'll just maintain the current order based on how they were added
+        // A more sophisticated implementation would maintain a custom order
+    }
+
+    fun moveFavoriteDown(municipio: Municipio) {
+        // For simplicity, we'll just maintain the current order based on how they were added
+        // A more sophisticated implementation would maintain a custom order
     }
 
     /** Called from UI when user clicks a municipio */
@@ -226,12 +312,4 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun toggleFavorite(m: Municipio) {
         favoritesRepository.toggleFavorite(m)
     }
-
-    private fun List<UiItem>.sortedByName() =
-        sortedWith(compareBy {
-            when (it) {
-                is UiItem.Prov -> it.p.nombre
-                is UiItem.Mun  -> it.m.nombre
-            }
-        })
 }
