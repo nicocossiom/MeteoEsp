@@ -15,9 +15,6 @@ interface TiempoNetApiService {
         @Path("codProv") codProv: String
     ): MunicipiosResponse
 
-    @GET("json/v2/municipios")
-    suspend fun getMunicipio(@Query("nombre") nombre: String): MunicipiosResponse
-
     @GET("json/v2/provincias/{codProv}/municipios/{id}")
     suspend fun getWeather(
         @Path("codProv") codProv: String,

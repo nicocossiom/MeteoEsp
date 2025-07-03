@@ -3,10 +3,11 @@ package com.mssdepas.meteoesp.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.mssdepas.meteoesp.MainActivity
 import com.mssdepas.meteoesp.data.local.FavoritesRepository
 import com.mssdepas.meteoesp.data.model.Municipio
 import com.mssdepas.meteoesp.data.model.Provincia
-import com.mssdepas.meteoesp.data.remote.LocationRepository
+import com.mssdepas.meteoesp.data.local.LocationRepository
 import com.mssdepas.meteoesp.data.remote.RetrofitInstance
 import com.mssdepas.meteoesp.data.remote.WeatherResponse
 import com.mssdepas.meteoesp.util.AppLogger
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 enum class SearchMode { PROVINCIA, MUNICIPIO, AMBOS }
 
@@ -42,6 +44,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentLocationWeather = MutableStateFlow<WeatherResponse?>(null)
     val currentLocationWeather: StateFlow<WeatherResponse?> = _currentLocationWeather.asStateFlow()
 
+    private val _isLoadingCurrentLocation = MutableStateFlow(false)
+    val isLoadingCurrentLocation: StateFlow<Boolean> = _isLoadingCurrentLocation.asStateFlow()
+
+    private val _locationError = MutableStateFlow<String?>(null)
+    val locationError: StateFlow<String?> = _locationError.asStateFlow()
+
     private val _favoriteWeathers = MutableStateFlow<List<WeatherResponse>>(emptyList())
     val favoriteWeathers: StateFlow<List<WeatherResponse>> = _favoriteWeathers.asStateFlow()
 
@@ -55,9 +63,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             loadInitialData()
-            fetchCurrentLocationWeather()
         }
         observeFavorites()
+    }
+
+    fun onLocationPermissionGranted() {
+        fetchCurrentLocationWeather()
+    }
+
+    fun retryLocationWeather() {
+        fetchCurrentLocationWeather()
+    }
+
+    fun dismissLocationErrorDialog() {
+        _locationError.value = null
     }
 
     private fun observeFavorites() {
@@ -109,19 +128,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+
     private fun fetchCurrentLocationWeather() = viewModelScope.launch {
-        val municipalityName = locationRepository.getCurrentMunicipalityName()
-        if (municipalityName != null) {
-            try {
-                val munResponse = api.getMunicipio(municipalityName)
-                munResponse.municipios.firstOrNull()?.let {
-                    val id5 = it.codigoINE.take(5)
-                    _currentLocationWeather.value = api.getWeather(it.codProv, id5)
-                }
-            } catch (e: Exception) {
-                AppLogger.e("Error fetching weather for current location", throwable = e)
+        _isLoadingCurrentLocation.value = true
+        _locationError.value = null
+
+        try {
+            // Add timeout to prevent hanging
+            val municipalityName = withTimeoutOrNull(15000L) { // 15 second timeout
+                locationRepository.getCurrentMunicipalityName()
             }
+
+            if (municipalityName != null) {
+                try {
+                    val municipio = getMunicipio(municipalityName)
+                    val id5 = municipio.codigoINE.take(5)
+                    _currentLocationWeather.value = api.getWeather(municipio.codProv, id5)
+                    AppLogger.i("Successfully fetched weather for current location: ${municipio.nombre}")
+
+                } catch (e: Exception) {
+                    AppLogger.e("Error fetching weather for current location", throwable = e)
+                    _locationError.value = "No se pudo obtener el tiempo para la ubicación encontrada."
+                }
+            } else {
+                AppLogger.w("Could not get municipality name from location.")
+                _locationError.value = "No se pudo determinar tu ubicación. Verifica que el GPS esté activado y tengas conexión a internet."
+            }
+        } catch (e: Exception) {
+            AppLogger.e("Failed to get current location weather", throwable = e)
+            _locationError.value = "Tiempo agotado al obtener la ubicación. Verifica que el GPS esté activado."
+        } finally {
+            _isLoadingCurrentLocation.value = false
         }
+    }
+
+    private fun getMunicipio(municipalityName: String): Municipio {
+        return _municipios.value.firstOrNull { it.nombre.equals(municipalityName, true) }
+            ?: throw IllegalArgumentException("Municipio no encontrado: $municipalityName")
     }
 
     fun setSearchMode(mode: SearchMode) {
