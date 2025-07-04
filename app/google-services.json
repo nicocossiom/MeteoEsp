@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1081829187491",
+    "project_id": "pas-cf840e6f",
+    "storage_bucket": "pas-cf840e6f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1081829187491:android:809305f81091ef30cdc416",
+        "android_client_info": {
+          "package_name": "com.mssdepas.meteoesp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1081829187491-dsded12cbqp3edt8u2o6j7lkru12gdm4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.mssdepas.meteoesp",
+            "certificate_hash": "82122f8287eefaecb12ce9213707280e82949e06"
+          }
+        },
+        {
+          "client_id": "1081829187491-pshfp2bmhu0mcjo2d3cc2p0h1gv5v8gs.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD2tRpDHrkJNsJZVYxCiJulYZLV5gBfs-Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1081829187491-pshfp2bmhu0mcjo2d3cc2p0h1gv5v8gs.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -2,6 +2,7 @@ package com.mssdepas.meteoesp
 
 import android.app.Application
 import android.util.Log
+import com.google.firebase.FirebaseApp
 import com.mssdepas.meteoesp.util.GlobalExceptionHandler // Ensure this import path is correct
 
 class MeteoEspApplication : Application() {
@@ -9,7 +10,6 @@ class MeteoEspApplication : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // Get the current default uncaught exception handler
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
 
         // Set your custom handler

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,11 +16,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.mssdepas.meteoesp.data.local.LocationRepository
+import com.mssdepas.meteoesp.ui.AuthViewModel
 import com.mssdepas.meteoesp.ui.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(vm: MainViewModel) {
+fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
 
     val currentLocationWeather by vm.currentLocationWeather.collectAsState()
     val isLoadingCurrentLocation by vm.isLoadingCurrentLocation.collectAsState()
@@ -36,6 +38,7 @@ fun MainScreen(vm: MainViewModel) {
     val favoriteMunicipios by vm.favoriteMunicipios.collectAsState()
 
     var showPermissionDialog by remember { mutableStateOf(false) }
+    var showUserProfile by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -118,10 +121,22 @@ fun MainScreen(vm: MainViewModel) {
         )
     }
 
+    if (showUserProfile) {
+        UserProfileDialog(
+            authViewModel = authViewModel,
+            onDismiss = { showUserProfile = false }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Tiempo España") }
+                title = { Text("Tiempo España") },
+                actions = {
+                    IconButton(onClick = { showUserProfile = true }) {
+                        Icon(Icons.Default.Person, contentDescription = "Perfil de usuario")
+                    }
+                }
             )
         }
     ) { padding ->

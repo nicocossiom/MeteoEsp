@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.mssdepas.meteoesp" />
+                  <option name="mobileSdkAppId" value="1:1081829187491:android:809305f81091ef30cdc416" />
+                  <option name="projectId" value="pas-cf840e6f" />
+                  <option name="projectNumber" value="1081829187491" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
