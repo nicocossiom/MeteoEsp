@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -27,6 +28,7 @@ import androidx.navigation.compose.rememberNavController
 import com.mssdepas.meteoesp.ui.AuthState
 import com.mssdepas.meteoesp.ui.AuthViewModel
 import com.mssdepas.meteoesp.ui.MainViewModel
+import com.mssdepas.meteoesp.ui.main.AccountScreen
 import com.mssdepas.meteoesp.ui.main.MainScreen
 import com.mssdepas.meteoesp.ui.main.MapScreen
 import com.mssdepas.meteoesp.ui.theme.MeteoEspTheme
@@ -34,11 +36,13 @@ import com.mssdepas.meteoesp.ui.theme.MeteoEspTheme
 sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
     data object Home : Screen("home", "Inicio", Icons.Default.Home)
     object Map : Screen("map", "Mapa", Icons.Default.Map)
+    object Account : Screen("account", "Cuenta", Icons.Default.Person)
 }
 
 val items = listOf(
     Screen.Home,
-    Screen.Map
+    Screen.Map,
+    Screen.Account
 )
 
 class MainActivity : ComponentActivity() {
@@ -127,6 +131,9 @@ fun MeteoEspApp(
                     }
                     composable(Screen.Map.route) {
                         MapScreen(vm = mainViewModel)
+                    }
+                    composable(Screen.Account.route) {
+                        AccountScreen(authViewModel = authViewModel)
                     }
                 }
             }

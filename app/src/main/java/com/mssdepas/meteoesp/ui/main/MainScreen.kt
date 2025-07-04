@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -42,7 +41,6 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
     val favoriteItems by vm.favoriteItems.collectAsState()
 
     var showPermissionDialog by remember { mutableStateOf(false) }
-    var showUserProfile by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -125,22 +123,10 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
         )
     }
 
-    if (showUserProfile) {
-        UserProfileDialog(
-            authViewModel = authViewModel,
-            onDismiss = { showUserProfile = false }
-        )
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Tiempo España") },
-                actions = {
-                    IconButton(onClick = { showUserProfile = true }) {
-                        Icon(Icons.Default.Person, contentDescription = "Perfil de usuario")
-                    }
-                }
+                title = { Text("Tiempo España") }
             )
         }
     ) { padding ->

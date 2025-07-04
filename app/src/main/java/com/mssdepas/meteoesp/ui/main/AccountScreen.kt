@@ -3,11 +3,7 @@ package com.mssdepas.meteoesp.ui.main
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,17 +12,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.mssdepas.meteoesp.ui.AuthState
 import com.mssdepas.meteoesp.ui.AuthViewModel
 
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun UserProfileDialog(
-    authViewModel: AuthViewModel,
-    onDismiss: () -> Unit
-) {
+fun AccountScreen(authViewModel: AuthViewModel) {
     val authState by authViewModel.authState.collectAsState()
     val isLoading by authViewModel.isLoading.collectAsState()
     val errorMessage by authViewModel.errorMessage.collectAsState()
@@ -35,21 +26,21 @@ fun UserProfileDialog(
     var showChangeEmail by remember { mutableStateOf(false) }
     var showDeleteAccount by remember { mutableStateOf(false) }
 
+    errorMessage?.let { error ->
+        AlertDialog(
+            onDismissRequest = { authViewModel.clearError() },
+            title = { Text("Información") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = { authViewModel.clearError() }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     if (authState is AuthState.Authenticated) {
         val user = (authState as AuthState.Authenticated).user
-
-        errorMessage?.let { error ->
-            AlertDialog(
-                onDismissRequest = { authViewModel.clearError() },
-                title = { Text("Información") },
-                text = { Text(error) },
-                confirmButton = {
-                    TextButton(onClick = { authViewModel.clearError() }) {
-                        Text("OK")
-                    }
-                }
-            )
-        }
 
         if (showChangePassword) {
             ChangePasswordDialog(
@@ -83,126 +74,109 @@ fun UserProfileDialog(
                 }
             )
         }
+    }
 
-        Dialog(
-            onDismissRequest = onDismiss,
-            properties = DialogProperties(usePlatformDefaultWidth = false)
-        ) {
-            Card(
+    Scaffold(
+        topBar = {
+            TopAppBar(title = { Text("Gestión de cuenta") })
+        }
+    ) { padding ->
+        if (authState is AuthState.Authenticated) {
+            val user = (authState as AuthState.Authenticated).user
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .padding(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    .padding(padding)
+                    .padding(16.dp)
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+                // User Info
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Información Personal",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    HorizontalDivider()
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            "Perfil de Usuario",
-                            style = MaterialTheme.typography.headlineSmall
-                        )
-                        TextButton(onClick = onDismiss) {
-                            Text("Cerrar")
-                        }
+                        Icon(Icons.Default.Email, contentDescription = null)
+                        Text("Email: ${user.email ?: "No disponible"}")
                     }
 
-                    HorizontalDivider()
-
-                    // User Info
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "Información Personal",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.Email, contentDescription = null)
-                            Text("Email: ${user.email ?: "No disponible"}")
-                        }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.Person, contentDescription = null)
-                            Text("Proveedor: ${if (user.providerData.any { it.providerId == "google.com" }) "Google" else "Email"}")
-                        }
-
-                        if (!user.isEmailVerified && user.email != null) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    "Email no verificado",
-                                    color = MaterialTheme.colorScheme.error,
-                                    style = MaterialTheme.typography.bodySmall
-                                )
-                                TextButton(
-                                    onClick = { authViewModel.sendEmailVerification() },
-                                    enabled = !isLoading
-                                ) {
-                                    Text("Verificar")
-                                }
-                            }
-                        }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(Icons.Default.Person, contentDescription = null)
+                        Text("Proveedor: ${if (user.providerData.any { it.providerId == "google.com" }) "Google" else "Email"}")
                     }
 
-                    HorizontalDivider()
-
-                    // Account Actions
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "Configuración de Cuenta",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-
-                        if (user.providerData.any { it.providerId == "password" }) {
-                            Button(
-                                onClick = { showChangePassword = true },
-                                modifier = Modifier.fillMaxWidth(),
+                    if (!user.isEmailVerified && user.email != null) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Email no verificado",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            TextButton(
+                                onClick = { authViewModel.sendEmailVerification() },
                                 enabled = !isLoading
                             ) {
-                                Text("Cambiar Contraseña")
+                                Text("Verificar")
                             }
                         }
+                    }
+                }
 
+                // Account Actions
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Configuración de Cuenta",
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    HorizontalDivider()
+
+                    if (user.providerData.any { it.providerId == "password" }) {
                         Button(
-                            onClick = { showChangeEmail = true },
+                            onClick = { showChangePassword = true },
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isLoading
                         ) {
-                            Text("Cambiar Email")
+                            Text("Cambiar Contraseña")
                         }
+                    }
 
-                        Button(
-                            onClick = { authViewModel.signOut() },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isLoading
-                        ) {
-                            Text("Cerrar Sesión")
-                        }
+                    Button(
+                        onClick = { showChangeEmail = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading
+                    ) {
+                        Text("Cambiar Email")
+                    }
 
-                        OutlinedButton(
-                            onClick = { showDeleteAccount = true },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !isLoading,
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error
-                            )
-                        ) {
-                            Text("Eliminar Cuenta")
-                        }
+                    Button(
+                        onClick = { authViewModel.signOut() },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading
+                    ) {
+                        Text("Cerrar Sesión")
+                    }
+
+                    OutlinedButton(
+                        onClick = { showDeleteAccount = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isLoading,
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Eliminar Cuenta")
                     }
                 }
             }
