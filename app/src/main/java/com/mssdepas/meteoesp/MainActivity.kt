@@ -6,15 +6,40 @@ import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Map
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-    import com.mssdepas.meteoesp.ui.AuthState
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.mssdepas.meteoesp.ui.AuthState
 import com.mssdepas.meteoesp.ui.AuthViewModel
 import com.mssdepas.meteoesp.ui.MainViewModel
 import com.mssdepas.meteoesp.ui.main.MainScreen
+import com.mssdepas.meteoesp.ui.main.MapScreen
 import com.mssdepas.meteoesp.ui.theme.MeteoEspTheme
+
+sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
+    data object Home : Screen("home", "Inicio", Icons.Default.Home)
+    object Map : Screen("map", "Mapa", Icons.Default.Map)
+}
+
+val items = listOf(
+    Screen.Home,
+    Screen.Map
+)
 
 class MainActivity : ComponentActivity() {
 
@@ -67,7 +92,44 @@ fun MeteoEspApp(
         }
 
         is AuthState.Authenticated -> {
-            MainScreen(vm = mainViewModel, authViewModel = authViewModel)
+            val navController = rememberNavController()
+            Scaffold(
+                bottomBar = {
+                    NavigationBar {
+                        val navBackStackEntry by navController.currentBackStackEntryAsState()
+                        val currentRoute = navBackStackEntry?.destination?.route
+                        items.forEach { screen ->
+                            NavigationBarItem(
+                                icon = { Icon(screen.icon, contentDescription = screen.title) },
+                                label = { Text(screen.title) },
+                                selected = currentRoute == screen.route,
+                                onClick = {
+                                    navController.navigate(screen.route) {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            ) { innerPadding ->
+                NavHost(
+                    navController = navController,
+                    startDestination = Screen.Home.route,
+                    modifier = Modifier.padding(innerPadding)
+                ) {
+                    composable(Screen.Home.route) {
+                        MainScreen(vm = mainViewModel, authViewModel = authViewModel)
+                    }
+                    composable(Screen.Map.route) {
+                        MapScreen(vm = mainViewModel)
+                    }
+                }
+            }
         }
     }
 }

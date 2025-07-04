@@ -16,6 +16,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -25,6 +29,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _provincias = MutableStateFlow<List<Provincia>>(emptyList())
     private val _municipios = MutableStateFlow<List<Municipio>>(emptyList())
+    val provincias: StateFlow<List<Provincia>> = _provincias.asStateFlow()
+    val municipios: StateFlow<List<Municipio>> = _municipios.asStateFlow()
 
     private val _selectedProvincia = MutableStateFlow<Provincia?>(null)
     val selectedProvincia: StateFlow<Provincia?> = _selectedProvincia.asStateFlow()
@@ -269,5 +275,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissWeather() {
         _selectedWeather.value = null
+    }
+
+    fun getWeatherForLatLng(lat: Double, lon: Double) = viewModelScope.launch {
+        _selectedWeather.value = null
+        val closestMunicipio = findClosestMunicipio(lat, lon)
+        if (closestMunicipio != null) {
+            loadWeather(closestMunicipio)
+        } else {
+            // Handle case where no municipio is found (e.g., click in the ocean)
+            AppLogger.w("No municipio found for coordinates: lat=$lat, lon=$lon")
+        }
+    }
+
+    private fun findClosestMunicipio(lat: Double, lon: Double): Municipio? {
+        var closestMunicipio: Municipio? = null
+        var minDistance = Double.MAX_VALUE
+
+        // This is a simplified search. For a large number of municipalities,
+        // a spatial index (like a k-d tree or quadtree) would be more efficient.
+        _municipios.value.forEach { municipio ->
+            // The AEMET API provides lat/lon as strings, so we need to parse them.
+            // A production app should handle potential parsing errors gracefully.
+            val munLat = municipio.latitud.replace(',', '.').toDoubleOrNull()
+            val munLon = municipio.longitud.replace(',', '.').toDoubleOrNull()
+
+            if (munLat != null && munLon != null) {
+                val distance = haversineDistance(lat, lon, munLat, munLon)
+                if (distance < minDistance) {
+                    minDistance = distance
+                    closestMunicipio = municipio
+                }
+            }
+        }
+        // We can set a threshold to avoid picking a municipality that is too far away.
+        // For example, if (minDistance < 50) return closestMunicipio
+        return closestMunicipio
+    }
+
+    private fun haversineDistance(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val R = 6371.0 // Radius of Earth in kilometers
+
+        val latDistance = Math.toRadians(lat2 - lat1)
+        val lonDistance = Math.toRadians(lon2 - lon1)
+        val a = sin(latDistance / 2) * sin(latDistance / 2) +
+                cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
+                sin(lonDistance / 2) * sin(lonDistance / 2)
+        val c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        return R * c
     }
 }
