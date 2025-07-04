@@ -3,14 +3,18 @@ package com.mssdepas.meteoesp.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 import com.mssdepas.meteoesp.data.local.FavoritesRepository
 import com.mssdepas.meteoesp.data.model.Municipio
 import com.mssdepas.meteoesp.data.model.Provincia
 import com.mssdepas.meteoesp.data.local.LocationRepository
+import com.mssdepas.meteoesp.data.local.UserPreferenceRepository
 import com.mssdepas.meteoesp.data.remote.RetrofitInstance
 import com.mssdepas.meteoesp.data.remote.WeatherResponse
 import com.mssdepas.meteoesp.util.AppLogger
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
@@ -27,6 +31,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val api = RetrofitInstance.api
     private val locationRepository = LocationRepository(application)
     private val favoritesRepository = FavoritesRepository(application)
+    private val userPreferencesRepository = UserPreferenceRepository(application)
 
     private val _provincias = MutableStateFlow<List<Provincia>>(emptyList())
     private val _municipios = MutableStateFlow<List<Municipio>>(emptyList())
@@ -55,6 +60,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _favoriteItems = MutableStateFlow<List<FavoriteItem>>(emptyList())
     val favoriteItems: StateFlow<List<FavoriteItem>> = _favoriteItems.asStateFlow()
 
+    private val _favoritesLastUpdated = MutableStateFlow<Long>(0L)
+    val favoritesLastUpdated: StateFlow<Long> = _favoritesLastUpdated.asStateFlow()
+
     private val _selectedWeather = MutableStateFlow<WeatherResponse?>(null)
     val selectedWeather: StateFlow<WeatherResponse?> = _selectedWeather.asStateFlow()
 
@@ -67,12 +75,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _locationError = MutableStateFlow<String?>(null)
     val locationError: StateFlow<String?> = _locationError.asStateFlow()
 
+    private val _isCurrentLocationFromCache = MutableStateFlow(false)
+    val isCurrentLocationFromCache: StateFlow<Boolean> = _isCurrentLocationFromCache.asStateFlow()
+
+    private var initialLocationFetched = false
+
     private val _selectedMunicipioWeather = MutableStateFlow<WeatherResponse?>(null)
     val selectedMunicipioWeather: StateFlow<WeatherResponse?> = _selectedMunicipioWeather.asStateFlow()
 
     // For map screen
     private val _showFavoritesOnMap = MutableStateFlow(false)
     val showFavoritesOnMap: StateFlow<Boolean> = _showFavoritesOnMap.asStateFlow()
+
+    private val _mapCameraPosition = MutableStateFlow<CameraPosition?>(null)
+    val mapCameraPosition: StateFlow<CameraPosition?> = _mapCameraPosition.asStateFlow()
 
     val mapMarkers: StateFlow<List<Municipio>> = combine(
         selectedMunicipio,
@@ -85,7 +101,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             markers.addAll(favorites)
         }
         markers.toList()
-    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
 
     init {
@@ -100,7 +116,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun onLocationPermissionGranted() {
-        fetchCurrentLocationWeather()
+        if (!initialLocationFetched) {
+            fetchCurrentLocationWeather()
+        }
     }
 
     fun retryLocationWeather() {
@@ -114,6 +132,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun observeFavorites() {
         viewModelScope.launch {
             combine(_municipios, favoritesRepository.favorites, _provincias) { municipios, favorites, provincias ->
+                _favoritesLastUpdated.value = System.currentTimeMillis()
                 Triple(municipios, favorites, provincias)
             }.collect { (municipios, _, provincias) ->
                 updateFavoriteItems(municipios, provincias)
@@ -162,39 +181,64 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun fetchCurrentLocationWeather() = viewModelScope.launch {
         _isLoadingCurrentLocation.value = true
         _locationError.value = null
+        _isCurrentLocationFromCache.value = false
+        initialLocationFetched = true
 
         try {
-            // Add timeout to prevent hanging
             val municipalityName = withTimeoutOrNull(15000L) { // 15 second timeout
                 locationRepository.getCurrentMunicipalityName()
             }
 
             if (municipalityName != null) {
                 try {
-                    val municipio = getMunicipio(municipalityName)
+                    val municipio = getMunicipioByName(municipalityName)
                     val id5 = municipio.codigoINE.take(5)
                     _currentLocationWeather.value = api.getWeather(municipio.codProv, id5)
+                    // Save successful location
+                    userPreferencesRepository.lastKnownMunicipalityId = municipio.codigoINE
                     AppLogger.i("Successfully fetched weather for current location: ${municipio.nombre}")
 
                 } catch (e: Exception) {
                     AppLogger.e("Error fetching weather for current location", throwable = e)
-                    _locationError.value = "No se pudo obtener el tiempo para la ubicación encontrada '${municipalityName}'."
+                    loadWeatherFromCacheOrShowError("No se pudo obtener el tiempo para la ubicación encontrada '${municipalityName}'.")
                 }
             } else {
                 AppLogger.w("Could not get municipality name from location.")
-                _locationError.value = "No se pudo determinar tu ubicación. Verifica que el GPS esté activado y tengas conexión a internet."
+                loadWeatherFromCacheOrShowError("No se pudo determinar tu ubicación. Verifica que el GPS esté activado y tengas conexión a internet.")
             }
         } catch (e: Exception) {
             AppLogger.e("Failed to get current location weather", throwable = e)
-            _locationError.value = "Tiempo agotado al obtener la ubicación. Verifica que el GPS esté activado."
+            loadWeatherFromCacheOrShowError("Tiempo agotado al obtener la ubicación. Verifica que el GPS esté activado.")
         } finally {
             _isLoadingCurrentLocation.value = false
         }
     }
 
-    private fun getMunicipio(municipalityName: String): Municipio {
+    private fun loadWeatherFromCacheOrShowError(errorMsg: String) = viewModelScope.launch {
+        val cachedId = userPreferencesRepository.lastKnownMunicipalityId
+        if (cachedId != null) {
+            try {
+                val cachedMunicipio = getMunicipioByIne(cachedId)
+                loadWeather(cachedMunicipio, updateCurrent = true)
+                _isCurrentLocationFromCache.value = true
+                AppLogger.i("Loaded weather from cached location: ${cachedMunicipio.nombre}")
+            } catch (e: Exception) {
+                _locationError.value = errorMsg
+                AppLogger.e("Failed to load weather from cached ID: $cachedId", throwable = e)
+            }
+        } else {
+            _locationError.value = errorMsg
+        }
+    }
+
+    private fun getMunicipioByName(municipalityName: String): Municipio {
         return _municipios.value.firstOrNull { it.nombre.equals(municipalityName, true) }
             ?: throw IllegalArgumentException("Municipio no encontrado: $municipalityName")
+    }
+
+    private fun getMunicipioByIne(codigoIne: String): Municipio {
+        return _municipios.value.firstOrNull { it.codigoINE == codigoIne }
+            ?: throw IllegalArgumentException("Municipio no encontrado por INE: $codigoIne")
     }
 
     // Combo box methods
@@ -234,6 +278,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectMunicipio(municipio: Municipio) {
         _selectedMunicipio.value = municipio
         loadWeatherForMunicipio(municipio)
+
+        val lat = municipio.latitud.replace(',', '.').toDoubleOrNull()
+        val lon = municipio.longitud.replace(',', '.').toDoubleOrNull()
+        if (lat != null && lon != null) {
+            _mapCameraPosition.value = CameraPosition.fromLatLngZoom(LatLng(lat, lon), 12f)
+        }
     }
 
     private fun loadWeatherForMunicipio(municipio: Municipio) = viewModelScope.launch {
@@ -251,11 +301,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedMunicipio.value = null
         _municipiosFiltrados.value = emptyList()
         _selectedMunicipioWeather.value = null
+        _mapCameraPosition.value = null
     }
 
     fun clearMunicipioSelection() {
         _selectedMunicipio.value = null
         _selectedMunicipioWeather.value = null
+        _mapCameraPosition.value = null
     }
 
     // Action buttons
@@ -279,21 +331,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         favoritesRepository.toggleFavorite(municipio)
     }
 
-    fun moveFavoriteUp(municipio: Municipio) {
-        // For simplicity, we'll just maintain the current order based on how they were added
-        // A more sophisticated implementation would maintain a custom order
-    }
-
-    fun moveFavoriteDown(municipio: Municipio) {
-        // For simplicity, we'll just maintain the current order based on how they were added
-        // A more sophisticated implementation would maintain a custom order
-    }
 
     /** Called from UI when user clicks a municipio */
-    fun loadWeather(m: Municipio) = viewModelScope.launch {
+    fun loadWeather(m: Municipio, updateCurrent: Boolean = false) = viewModelScope.launch {
         val id5 = m.codigoINE.take(5)           // first 5 digits
-        _selectedWeather.value =
-            api.getWeather(m.codProv, id5)
+        val weather = api.getWeather(m.codProv, id5)
+        if (updateCurrent) {
+            _currentLocationWeather.value = weather
+        } else {
+            _selectedWeather.value = weather
+        }
     }
 
     fun dismissWeather() {

@@ -1,12 +1,14 @@
 package com.mssdepas.meteoesp.ui.main
 
 import android.Manifest
+import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,6 +32,7 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
     val isLoadingCurrentLocation by vm.isLoadingCurrentLocation.collectAsState()
     val locationError by vm.locationError.collectAsState()
     val weather by vm.selectedWeather.collectAsState()
+    val isCurrentLocationFromCache by vm.isCurrentLocationFromCache.collectAsState()
 
     val selectedProvincia by vm.selectedProvincia.collectAsState()
     val selectedMunicipio by vm.selectedMunicipio.collectAsState()
@@ -39,6 +42,7 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
     val showFavoritesManager by vm.showFavoritesManager.collectAsState()
     val favoriteMunicipios by vm.favoriteMunicipios.collectAsState()
     val favoriteItems by vm.favoriteItems.collectAsState()
+    val favoritesLastUpdated by vm.favoritesLastUpdated.collectAsState()
 
     var showPermissionDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -61,6 +65,8 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
         if (hasLocationPermission) {
             vm.onLocationPermissionGranted()
         } else {
+            // This will trigger the permission request, and the result will call
+            // onLocationPermissionGranted if successful.
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
@@ -144,7 +150,8 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
                 CurrentLocationSection(
                     isLoading = isLoadingCurrentLocation,
                     weather = currentLocationWeather,
-                    onRetry = { vm.retryLocationWeather() }
+                    onRetry = { vm.retryLocationWeather() },
+                    isFromCache = isCurrentLocationFromCache
                 )
             }
 
@@ -153,7 +160,8 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
                 FavoritesSection(
                     favoriteItems = favoriteItems,
                     onManageFavorites = { vm.showFavoritesManager() },
-                    onFavoriteClick = { vm.loadWeather(it) }
+                    onFavoriteClick = { vm.loadWeather(it) },
+                    lastUpdated = favoritesLastUpdated
                 )
             }
 
@@ -233,7 +241,8 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
 private fun FavoritesSection(
     favoriteItems: List<MainViewModel.FavoriteItem>,
     onManageFavorites: () -> Unit,
-    onFavoriteClick: (com.mssdepas.meteoesp.data.model.Municipio) -> Unit
+    onFavoriteClick: (com.mssdepas.meteoesp.data.model.Municipio) -> Unit,
+    lastUpdated: Long
 ) {
     Column {
         // Header with manage button
@@ -246,16 +255,31 @@ private fun FavoritesSection(
                 "Favoritos",
                 style = MaterialTheme.typography.titleMedium
             )
-            TextButton(
-                onClick = onManageFavorites
-            ) {
-                Icon(
-                    Icons.Default.Settings,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text("Gestionar")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (lastUpdated > 0) {
+                    val timeAgo = DateUtils.getRelativeTimeSpanString(
+                        lastUpdated,
+                        System.currentTimeMillis(),
+                        DateUtils.MINUTE_IN_MILLIS
+                    ).toString()
+                    Text(
+                        text = timeAgo,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(4.dp))
+                }
+                TextButton(
+                    onClick = onManageFavorites
+                ) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text("Gestionar")
+                }
             }
         }
 
@@ -336,14 +360,35 @@ private fun FavoriteCard(
 private fun CurrentLocationSection(
     isLoading: Boolean,
     weather: com.mssdepas.meteoesp.data.remote.WeatherResponse?,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
+    isFromCache: Boolean
 ) {
     Column {
-        Text(
-            "Tu ubicación",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Tu ubicación",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            if (weather != null || isLoading) {
+                IconButton(onClick = onRetry, enabled = !isLoading) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Actualizar ubicación")
+                }
+            }
+        }
+
+        if (isFromCache && !isLoading) {
+            Text(
+                "No se pudo obtener la ubicación actual. Mostrando última ubicación conocida.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+        }
 
         when {
             isLoading -> {

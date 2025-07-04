@@ -8,6 +8,7 @@ import com.mssdepas.meteoesp.util.AppLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.core.content.edit
 
 class FavoritesRepository(context: Context) {
 
@@ -74,7 +75,7 @@ class FavoritesRepository(context: Context) {
     }
 
     private fun saveToLocal(favorites: Set<String>) {
-        localPrefs.edit().putStringSet(favoritesKey, favorites).apply()
+        localPrefs.edit { putStringSet(favoritesKey, favorites) }
     }
 
     private fun addToFirestore(municipio: Municipio) {

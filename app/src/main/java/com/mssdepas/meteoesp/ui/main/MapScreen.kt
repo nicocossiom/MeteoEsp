@@ -16,11 +16,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
@@ -35,6 +37,7 @@ fun MapScreen(vm: MainViewModel) {
     val weather by vm.selectedWeather.collectAsState()
     val mapMarkers by vm.mapMarkers.collectAsState()
     val showFavoritesOnMap by vm.showFavoritesOnMap.collectAsState()
+    val mapCameraPosition by vm.mapCameraPosition.collectAsState()
 
     val provinciasFiltradas by vm.provinciasFiltradas.collectAsState()
     val municipiosFiltrados by vm.municipiosFiltrados.collectAsState()
@@ -42,8 +45,18 @@ fun MapScreen(vm: MainViewModel) {
     val selectedMunicipio by vm.selectedMunicipio.collectAsState()
 
     // Centered on Spain
-    val spainCameraPosition = rememberCameraPositionState {
+    val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(LatLng(40.416775, -3.703790), 5f)
+    }
+
+    // Animate camera when a municipio is selected
+    LaunchedEffect(mapCameraPosition) {
+        mapCameraPosition?.let {
+            cameraPositionState.animate(
+                com.google.android.gms.maps.CameraUpdateFactory.newCameraPosition(it),
+                1000
+            )
+        }
     }
 
     if (weather != null) {
@@ -55,7 +68,7 @@ fun MapScreen(vm: MainViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
         GoogleMap(
             modifier = Modifier.fillMaxSize(),
-            cameraPositionState = spainCameraPosition,
+            cameraPositionState = cameraPositionState,
             onMapClick = { latLng ->
                 vm.getWeatherForLatLng(latLng.latitude, latLng.longitude)
             }
@@ -85,7 +98,10 @@ fun MapScreen(vm: MainViewModel) {
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White
+                )
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
