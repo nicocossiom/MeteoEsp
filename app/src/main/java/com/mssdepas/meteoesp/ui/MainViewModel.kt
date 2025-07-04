@@ -44,6 +44,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _favoriteMunicipios = MutableStateFlow<List<Municipio>>(emptyList())
     val favoriteMunicipios: StateFlow<List<Municipio>> = _favoriteMunicipios.asStateFlow()
 
+    data class FavoriteItem(val municipio: Municipio, val provinciaNombre: String)
+    private val _favoriteItems = MutableStateFlow<List<FavoriteItem>>(emptyList())
+    val favoriteItems: StateFlow<List<FavoriteItem>> = _favoriteItems.asStateFlow()
+
     private val _selectedWeather = MutableStateFlow<WeatherResponse?>(null)
     val selectedWeather: StateFlow<WeatherResponse?> = _selectedWeather.asStateFlow()
 
@@ -80,11 +84,23 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun observeFavorites() {
         viewModelScope.launch {
-            combine(_municipios, favoritesRepository.favorites) { municipios, favIds ->
-                Pair(municipios, favIds)
-            }.collect { (municipios, _) ->
+            combine(_municipios, favoritesRepository.favorites, _provincias) { municipios, favorites, provincias ->
+                Triple(municipios, favorites, provincias)
+            }.collect { (municipios, _, provincias) ->
+                updateFavoriteItems(municipios, provincias)
                 updateFavoriteMunicipios(municipios)
             }
+        }
+    }
+
+    private fun updateFavoriteItems(allMunicipios: List<Municipio>, allProvincias: List<Provincia>) {
+        val favoriteMunicipios = favoritesRepository.getFavoriteMunicipios(allMunicipios)
+        val provinciaMap = allProvincias.associateBy { it.id }
+        _favoriteItems.value = favoriteMunicipios.map { municipio ->
+            FavoriteItem(
+                municipio = municipio,
+                provinciaNombre = provinciaMap[municipio.codProv]?.nombre ?: ""
+            )
         }
     }
 

@@ -18,8 +18,12 @@ import androidx.compose.ui.unit.dp
 import com.mssdepas.meteoesp.data.local.LocationRepository
 import com.mssdepas.meteoesp.ui.AuthViewModel
 import com.mssdepas.meteoesp.ui.MainViewModel
+import androidx.compose.foundation.layout.Arrangement.spacedBy
+import androidx.compose.foundation.lazy.items
+import androidx.compose.runtime.collectAsState
+import com.mssdepas.meteoesp.data.model.Provincia
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
 
@@ -35,6 +39,7 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
     val municipiosFiltrados by vm.municipiosFiltrados.collectAsState()
     val showFavoritesManager by vm.showFavoritesManager.collectAsState()
     val favoriteMunicipios by vm.favoriteMunicipios.collectAsState()
+    val favoriteItems by vm.favoriteItems.collectAsState()
 
     var showPermissionDialog by remember { mutableStateOf(false) }
     var showUserProfile by remember { mutableStateOf(false) }
@@ -160,7 +165,7 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
             // Favorites Section - Always show
             item {
                 FavoritesSection(
-                    favoriteMunicipios = favoriteMunicipios,
+                    favoriteItems = favoriteItems,
                     onManageFavorites = { vm.showFavoritesManager() },
                     onFavoriteClick = { vm.loadWeather(it) }
                 )
@@ -237,9 +242,10 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FavoritesSection(
-    favoriteMunicipios: List<com.mssdepas.meteoesp.data.model.Municipio>,
+    favoriteItems: List<MainViewModel.FavoriteItem>,
     onManageFavorites: () -> Unit,
     onFavoriteClick: (com.mssdepas.meteoesp.data.model.Municipio) -> Unit
 ) {
@@ -270,13 +276,18 @@ private fun FavoritesSection(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Content
-        if (favoriteMunicipios.isNotEmpty()) {
-            favoriteMunicipios.forEach { favMunicipio ->
-                FavoriteItemRow(
-                    municipio = favMunicipio,
-                    onClick = { onFavoriteClick(favMunicipio) },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
+        if (favoriteItems.isNotEmpty()) {
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                favoriteItems.forEach { favItem ->
+                    FavoriteCard(
+                        item = favItem,
+                        onClick = { onFavoriteClick(favItem.municipio) }
+                    )
+                }
             }
         } else {
             Card(
@@ -311,21 +322,27 @@ private fun FavoritesSection(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FavoriteItemRow(
-    municipio: com.mssdepas.meteoesp.data.model.Municipio,
+private fun FavoriteCard(
+    item: MainViewModel.FavoriteItem,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Text(
-            text = municipio.nombre,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(16.dp)
-        )
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = item.municipio.nombre,
+                style = MaterialTheme.typography.titleSmall
+            )
+            Text(
+                text = item.provinciaNombre,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
