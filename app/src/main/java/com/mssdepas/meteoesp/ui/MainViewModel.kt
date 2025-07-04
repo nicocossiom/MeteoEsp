@@ -14,18 +14,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
-enum class SearchMode { PROVINCIA, MUNICIPIO, AMBOS }
-
 class MainViewModel(application: Application) : AndroidViewModel(application) {
-
-    sealed interface UiItem {                        // union type for the list
-        data class Prov(val p: Provincia) : UiItem
-        data class Mun(val m: Municipio, val isFavorite: Boolean) : UiItem
-    }
 
     private val api = RetrofitInstance.api
     private val locationRepository = LocationRepository(application)
@@ -64,13 +56,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _locationError = MutableStateFlow<String?>(null)
     val locationError: StateFlow<String?> = _locationError.asStateFlow()
 
-    private val _favoriteWeathers = MutableStateFlow<List<WeatherResponse>>(emptyList())
-    val favoriteWeathers: StateFlow<List<WeatherResponse>> = _favoriteWeathers.asStateFlow()
-
-    private val _selectedProvinciaWeather = MutableStateFlow<WeatherResponse?>(null)
-    val selectedProvinciaWeather: StateFlow<WeatherResponse?> = _selectedProvinciaWeather.asStateFlow()
-
-    private var lastQuery = ""
+    private val _selectedMunicipioWeather = MutableStateFlow<WeatherResponse?>(null)
+    val selectedMunicipioWeather: StateFlow<WeatherResponse?> = _selectedMunicipioWeather.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -96,7 +83,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             combine(_municipios, favoritesRepository.favorites) { municipios, favIds ->
                 Pair(municipios, favIds)
             }.collect { (municipios, _) ->
-                fetchFavoriteWeathers(municipios)
                 updateFavoriteMunicipios(municipios)
             }
         }
@@ -104,20 +90,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun updateFavoriteMunicipios(allMunicipios: List<Municipio>) {
         _favoriteMunicipios.value = favoritesRepository.getFavoriteMunicipios(allMunicipios)
-    }
-
-    private suspend fun fetchFavoriteWeathers(allMunicipios: List<Municipio>) {
-        val favoriteMunicipios = favoritesRepository.getFavoriteMunicipios(allMunicipios)
-        val weathers = favoriteMunicipios.mapNotNull { m ->
-            try {
-                val id5 = m.codigoINE.take(5)
-                api.getWeather(m.codProv, id5)
-            } catch (e: Exception) {
-                AppLogger.e("Error fetching weather for favorite ${m.nombre}", throwable = e)
-                null
-            }
-        }
-        _favoriteWeathers.value = weathers
     }
 
     private suspend fun loadInitialData() {
@@ -136,8 +108,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
             _municipios.value = allMuns
-            // Initial fetch, will be re-triggered by observer if needed
-            fetchFavoriteWeathers(allMuns)
             updateFavoriteMunicipios(allMuns)
         } catch (e: Exception) {
             AppLogger.e("Error cargando provincias:\n${e.message}", throwable = e)
@@ -194,38 +164,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun selectProvincia(provincia: Provincia) {
         _selectedProvincia.value = provincia
         _selectedMunicipio.value = null
-        _selectedProvinciaWeather.value = null
+        _selectedMunicipioWeather.value = null
         updateMunicipiosFiltrados("")
-        // Load weather for the capital or first municipality of the province
-        loadWeatherForProvincia(provincia)
-    }
-
-    private fun loadWeatherForProvincia(provincia: Provincia) = viewModelScope.launch {
-        try {
-            // Get the first municipality of the province (usually the capital)
-            val municipiosProvincia = _municipios.value.filter { it.codProv == provincia.id }
-            val firstMunicipio = municipiosProvincia.firstOrNull()
-
-            if (firstMunicipio != null) {
-                val id5 = firstMunicipio.codigoINE.take(5)
-                _selectedProvinciaWeather.value = api.getWeather(firstMunicipio.codProv, id5)
-                AppLogger.i("Successfully fetched weather for province ${provincia.nombre}: ${firstMunicipio.nombre}")
-            }
-        } catch (e: Exception) {
-            AppLogger.e("Error fetching weather for province ${provincia.nombre}", throwable = e)
-        }
-    }
-
-    fun addProvinciaToFavorites() {
-        val provincia = _selectedProvincia.value
-        if (provincia != null) {
-            // Add the first municipality of the province to favorites
-            val municipiosProvincia = _municipios.value.filter { it.codProv == provincia.id }
-            val firstMunicipio = municipiosProvincia.firstOrNull()
-            if (firstMunicipio != null && !favoritesRepository.isFavorite(firstMunicipio)) {
-                favoritesRepository.toggleFavorite(firstMunicipio)
-            }
-        }
     }
 
     fun filterMunicipios(query: String) {
@@ -248,26 +188,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun selectMunicipio(municipio: Municipio) {
         _selectedMunicipio.value = municipio
+        loadWeatherForMunicipio(municipio)
+    }
+
+    private fun loadWeatherForMunicipio(municipio: Municipio) = viewModelScope.launch {
+        _selectedMunicipioWeather.value = null // Show loading maybe? For now just clear.
+        try {
+            val id5 = municipio.codigoINE.take(5)
+            _selectedMunicipioWeather.value = api.getWeather(municipio.codProv, id5)
+        } catch (e: Exception) {
+            AppLogger.e("Error fetching weather for selected municipio ${municipio.nombre}", throwable = e)
+        }
     }
 
     fun clearProvinciaSelection() {
         _selectedProvincia.value = null
         _selectedMunicipio.value = null
         _municipiosFiltrados.value = emptyList()
+        _selectedMunicipioWeather.value = null
     }
 
     fun clearMunicipioSelection() {
         _selectedMunicipio.value = null
+        _selectedMunicipioWeather.value = null
     }
 
     // Action buttons
-    fun loadWeatherForSelected() = viewModelScope.launch {
-        val municipio = _selectedMunicipio.value
-        if (municipio != null) {
-            loadWeather(municipio)
-        }
-    }
-
     fun addSelectedToFavorites() {
         val municipio = _selectedMunicipio.value
         if (municipio != null && !favoritesRepository.isFavorite(municipio)) {
@@ -307,9 +253,5 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun dismissWeather() {
         _selectedWeather.value = null
-    }
-
-    fun toggleFavorite(m: Municipio) {
-        favoritesRepository.toggleFavorite(m)
     }
 }

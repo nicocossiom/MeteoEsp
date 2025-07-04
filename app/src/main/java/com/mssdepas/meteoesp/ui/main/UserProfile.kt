@@ -3,11 +3,11 @@ package com.mssdepas.meteoesp.ui.main
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -238,7 +238,7 @@ fun ChangePasswordDialog(
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
-                                if (passwordVisible) Icons.Default.Clear else Icons.Default.Done,
+                                if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                 contentDescription = if (passwordVisible) "Ocultar" else "Mostrar"
                             )
                         }
@@ -262,7 +262,7 @@ fun ChangePasswordDialog(
                     trailingIcon = {
                         IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                             Icon(
-                                if (confirmPasswordVisible) Icons.Default.Clear else Icons.Default.Done,
+                                if (confirmPasswordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                 contentDescription = if (confirmPasswordVisible) "Ocultar" else "Mostrar"
                             )
                         }
@@ -389,4 +389,3 @@ fun DeleteAccountDialog(
         }
     )
 }
-

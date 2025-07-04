@@ -25,13 +25,12 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
 
     val currentLocationWeather by vm.currentLocationWeather.collectAsState()
     val isLoadingCurrentLocation by vm.isLoadingCurrentLocation.collectAsState()
-    val favoriteWeathers by vm.favoriteWeathers.collectAsState()
     val locationError by vm.locationError.collectAsState()
     val weather by vm.selectedWeather.collectAsState()
 
     val selectedProvincia by vm.selectedProvincia.collectAsState()
     val selectedMunicipio by vm.selectedMunicipio.collectAsState()
-    val selectedProvinciaWeather by vm.selectedProvinciaWeather.collectAsState()
+    val selectedMunicipioWeather by vm.selectedMunicipioWeather.collectAsState()
     val provinciasFiltradas by vm.provinciasFiltradas.collectAsState()
     val municipiosFiltrados by vm.municipiosFiltrados.collectAsState()
     val showFavoritesManager by vm.showFavoritesManager.collectAsState()
@@ -161,8 +160,9 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
             // Favorites Section - Always show
             item {
                 FavoritesSection(
-                    favoriteWeathers = favoriteWeathers,
-                    onManageFavorites = { vm.showFavoritesManager() }
+                    favoriteMunicipios = favoriteMunicipios,
+                    onManageFavorites = { vm.showFavoritesManager() },
+                    onFavoriteClick = { vm.loadWeather(it) }
                 )
             }
 
@@ -192,30 +192,6 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
                             onClear = { vm.clearProvinciaSelection() }
                         )
 
-                        // Show weather for selected province
-                        if (selectedProvincia != null && selectedProvinciaWeather != null) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    "Tiempo en ${selectedProvincia!!.nombre}",
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-                                WeatherCard(weather = selectedProvinciaWeather!!)
-
-                                Button(
-                                    onClick = { vm.addProvinciaToFavorites() },
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Icon(
-                                        Icons.Default.Favorite,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Añadir a favoritos")
-                                }
-                            }
-                        }
-
                         // Municipality Combo Box (enabled only when province is selected)
                         SearchableComboBox(
                             label = "Municipio",
@@ -228,31 +204,30 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
                             onClear = { vm.clearMunicipioSelection() }
                         )
 
-                        // Action buttons (enabled only when municipality is selected)
+                        // Show weather for selected municipality
                         if (selectedMunicipio != null) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Button(
-                                    onClick = { vm.loadWeatherForSelected() },
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text("Ver tiempo")
-                                }
-
+                            Spacer(modifier = Modifier.height(16.dp))
+                            selectedMunicipioWeather?.let { weather ->
+                                WeatherCard(weather = weather)
+                                Spacer(modifier = Modifier.height(8.dp))
                                 OutlinedButton(
                                     onClick = { vm.addSelectedToFavorites() },
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Icon(
                                         Icons.Default.Favorite,
                                         contentDescription = null,
                                         modifier = Modifier.size(18.dp)
                                     )
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Favorito")
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Añadir a favoritos")
                                 }
+                            } ?: Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp), contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
                             }
                         }
                     }
@@ -264,8 +239,9 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
 
 @Composable
 private fun FavoritesSection(
-    favoriteWeathers: List<com.mssdepas.meteoesp.data.remote.WeatherResponse>,
-    onManageFavorites: () -> Unit
+    favoriteMunicipios: List<com.mssdepas.meteoesp.data.model.Municipio>,
+    onManageFavorites: () -> Unit,
+    onFavoriteClick: (com.mssdepas.meteoesp.data.model.Municipio) -> Unit
 ) {
     Column {
         // Header with manage button
@@ -294,10 +270,11 @@ private fun FavoritesSection(
         Spacer(modifier = Modifier.height(8.dp))
 
         // Content
-        if (favoriteWeathers.isNotEmpty()) {
-            favoriteWeathers.forEach { favWeather ->
-                WeatherCard(
-                    weather = favWeather,
+        if (favoriteMunicipios.isNotEmpty()) {
+            favoriteMunicipios.forEach { favMunicipio ->
+                FavoriteItemRow(
+                    municipio = favMunicipio,
+                    onClick = { onFavoriteClick(favMunicipio) },
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
@@ -329,6 +306,26 @@ private fun FavoritesSection(
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FavoriteItemRow(
+    municipio: com.mssdepas.meteoesp.data.model.Municipio,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Text(
+            text = municipio.nombre,
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(16.dp)
+        )
     }
 }
 
