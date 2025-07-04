@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.atan2
@@ -69,11 +70,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedMunicipioWeather = MutableStateFlow<WeatherResponse?>(null)
     val selectedMunicipioWeather: StateFlow<WeatherResponse?> = _selectedMunicipioWeather.asStateFlow()
 
+    // For map screen
+    private val _showFavoritesOnMap = MutableStateFlow(false)
+    val showFavoritesOnMap: StateFlow<Boolean> = _showFavoritesOnMap.asStateFlow()
+
+    val mapMarkers: StateFlow<List<Municipio>> = combine(
+        selectedMunicipio,
+        favoriteMunicipios,
+        showFavoritesOnMap
+    ) { selected, favorites, showFavorites ->
+        val markers = mutableSetOf<Municipio>()
+        selected?.let { markers.add(it) }
+        if (showFavorites) {
+            markers.addAll(favorites)
+        }
+        markers.toList()
+    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), emptyList())
+
+
     init {
         viewModelScope.launch {
             loadInitialData()
         }
         observeFavorites()
+    }
+
+    fun toggleShowFavoritesOnMap() {
+        _showFavoritesOnMap.value = !_showFavoritesOnMap.value
     }
 
     fun onLocationPermissionGranted() {
