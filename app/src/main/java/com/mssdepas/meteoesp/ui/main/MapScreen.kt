@@ -11,10 +11,13 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -22,6 +25,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.model.CameraPosition
@@ -32,6 +36,7 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.mssdepas.meteoesp.ui.MainViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MapScreen(vm: MainViewModel) {
     val weather by vm.selectedWeather.collectAsState()
@@ -43,6 +48,34 @@ fun MapScreen(vm: MainViewModel) {
     val municipiosFiltrados by vm.municipiosFiltrados.collectAsState()
     val selectedProvincia by vm.selectedProvincia.collectAsState()
     val selectedMunicipio by vm.selectedMunicipio.collectAsState()
+
+    val comboBoxColors = TextFieldDefaults.colors(
+        focusedTextColor = Color.Black.copy(alpha = 0.87f),
+        unfocusedTextColor = Color.Black.copy(alpha = 0.87f),
+        disabledTextColor = Color.Black.copy(alpha = 0.38f),
+        cursorColor = MaterialTheme.colorScheme.primary,
+        focusedContainerColor = Color.Transparent,
+        unfocusedContainerColor = Color.Transparent,
+        disabledContainerColor = Color.Transparent,
+        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+        unfocusedIndicatorColor = Color.Black.copy(alpha = 0.38f),
+        disabledIndicatorColor = Color.Black.copy(alpha = 0.12f),
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = Color.Black.copy(alpha = 0.6f),
+        disabledLabelColor = Color.Black.copy(alpha = 0.38f),
+        focusedTrailingIconColor = Color.Black.copy(alpha = 0.54f),
+        unfocusedTrailingIconColor = Color.Black.copy(alpha = 0.54f),
+        disabledTrailingIconColor = Color.Black.copy(alpha = 0.38f)
+    )
+
+    val dropdownMenuItemColors = MenuDefaults.itemColors(
+        textColor = Color.Black.copy(alpha = 0.87f),
+        leadingIconColor = Color.Black.copy(alpha = 0.54f),
+        trailingIconColor = Color.Black.copy(alpha = 0.54f),
+        disabledTextColor = Color.Black.copy(alpha = 0.38f),
+        disabledLeadingIconColor = Color.Black.copy(alpha = 0.38f),
+        disabledTrailingIconColor = Color.Black.copy(alpha = 0.38f)
+    )
 
     // Centered on Spain
     val cameraPositionState = rememberCameraPositionState {
@@ -119,7 +152,10 @@ fun MapScreen(vm: MainViewModel) {
                         onItemSelected = { vm.selectProvincia(it) },
                         onQueryChanged = { vm.filterProvincias(it) },
                         itemText = { it.nombre },
-                        onClear = { vm.clearProvinciaSelection() }
+                        onClear = { vm.clearProvinciaSelection() },
+                        colors = comboBoxColors,
+                        dropdownMenuModifier = Modifier.shadow(8.dp),
+                        dropdownMenuItemColors = dropdownMenuItemColors
                     )
 
                     SearchableComboBox(
@@ -130,7 +166,10 @@ fun MapScreen(vm: MainViewModel) {
                         onQueryChanged = { vm.filterMunicipios(it) },
                         itemText = { it.nombre },
                         enabled = selectedProvincia != null,
-                        onClear = { vm.clearMunicipioSelection() }
+                        onClear = { vm.clearMunicipioSelection() },
+                        colors = comboBoxColors,
+                        dropdownMenuModifier = Modifier.shadow(8.dp),
+                        dropdownMenuItemColors = dropdownMenuItemColors
                     )
                 }
             }

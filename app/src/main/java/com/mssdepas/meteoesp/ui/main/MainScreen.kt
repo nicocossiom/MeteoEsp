@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.mssdepas.meteoesp.data.local.LocationRepository
@@ -169,7 +170,10 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    )
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -188,7 +192,12 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
                             onItemSelected = { vm.selectProvincia(it) },
                             onQueryChanged = { vm.filterProvincias(it) },
                             itemText = { it.nombre },
-                            onClear = { vm.clearProvinciaSelection() }
+                            onClear = { vm.clearProvinciaSelection() },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                disabledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.12f)
+                            )
                         )
 
                         // Municipality Combo Box (enabled only when province is selected)
@@ -200,14 +209,24 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
                             onQueryChanged = { vm.filterMunicipios(it) },
                             itemText = { it.nombre },
                             enabled = selectedProvincia != null,
-                            onClear = { vm.clearMunicipioSelection() }
+                            onClear = { vm.clearMunicipioSelection() },
+                            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                disabledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.12f)
+                            )
                         )
 
                         // Show weather for selected municipality
                         if (selectedMunicipio != null) {
                             Spacer(modifier = Modifier.height(16.dp))
                             selectedMunicipioWeather?.let { weather ->
-                                WeatherCard(weather = weather)
+                                WeatherCard(
+                                    weather = weather,
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = MaterialTheme.colorScheme.surface
+                                    )
+                                )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 OutlinedButton(
                                     onClick = { vm.addSelectedToFavorites() },
@@ -244,85 +263,96 @@ private fun FavoritesSection(
     onFavoriteClick: (com.mssdepas.meteoesp.data.model.Municipio) -> Unit,
     lastUpdated: Long
 ) {
-    Column {
-        // Header with manage button
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Favoritos",
-                style = MaterialTheme.typography.titleMedium
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (lastUpdated > 0) {
-                    val timeAgo = DateUtils.getRelativeTimeSpanString(
-                        lastUpdated,
-                        System.currentTimeMillis(),
-                        DateUtils.MINUTE_IN_MILLIS
-                    ).toString()
-                    Text(
-                        text = timeAgo,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.width(4.dp))
-                }
-                TextButton(
-                    onClick = onManageFavorites
-                ) {
-                    Icon(
-                        Icons.Default.Settings,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text("Gestionar")
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Content
-        if (favoriteItems.isNotEmpty()) {
-            FlowRow(
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header with manage button
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                favoriteItems.forEach { favItem ->
-                    FavoriteCard(
-                        item = favItem,
-                        onClick = { onFavoriteClick(favItem.municipio) }
-                    )
-                }
-            }
-        } else {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
+                Text(
+                    "Favoritos",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (lastUpdated > 0) {
+                        val timeAgo = DateUtils.getRelativeTimeSpanString(
+                            lastUpdated,
+                            System.currentTimeMillis(),
+                            DateUtils.MINUTE_IN_MILLIS
+                        ).toString()
                         Text(
-                            "No tienes favoritos",
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            "Agrega ubicaciones para acceso rápido",
-                            style = MaterialTheme.typography.bodyMedium,
+                            text = timeAgo,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    TextButton(
+                        onClick = onManageFavorites
+                    ) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("Gestionar")
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Content
+            if (favoriteItems.isNotEmpty()) {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    favoriteItems.forEach { favItem ->
+                        FavoriteCard(
+                            item = favItem,
+                            onClick = { onFavoriteClick(favItem.municipio) }
+                        )
+                    }
+                }
+            } else {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    )
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "No tienes favoritos",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "Agrega ubicaciones para acceso rápido",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -340,7 +370,10 @@ private fun FavoriteCard(
     Card(
         onClick = onClick,
         modifier = modifier,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Text(
@@ -363,75 +396,94 @@ private fun CurrentLocationSection(
     onRetry: () -> Unit,
     isFromCache: Boolean
 ) {
-    Column {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Tu ubicación",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-            if (weather != null || isLoading) {
-                IconButton(onClick = onRetry, enabled = !isLoading) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Actualizar ubicación")
-                }
-            }
-        }
-
-        if (isFromCache && !isLoading) {
-            Text(
-                "No se pudo obtener la ubicación actual. Mostrando última ubicación conocida.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
-        when {
-            isLoading -> {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "Obteniendo ubicación...",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Tu ubicación",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+                if (weather != null || isLoading) {
+                    IconButton(onClick = onRetry, enabled = !isLoading) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Actualizar ubicación")
                     }
                 }
             }
-            weather != null -> {
-                WeatherCard(weather = weather)
+
+            if (isFromCache && !isLoading) {
+                Text(
+                    "No se pudo obtener la ubicación actual. Mostrando última ubicación conocida.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
             }
-            else -> {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            "Ubicación no disponible",
-                            style = MaterialTheme.typography.bodyLarge
+
+            when {
+                isLoading -> {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TextButton(onClick = onRetry) {
-                            Text("Reintentar")
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "Obteniendo ubicación...",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        }
+                    }
+                }
+                weather != null -> {
+                    WeatherCard(
+                        weather = weather,
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    )
+                }
+                else -> {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        )
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Ubicación no disponible",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            TextButton(onClick = onRetry) {
+                                Text("Reintentar")
+                            }
                         }
                     }
                 }

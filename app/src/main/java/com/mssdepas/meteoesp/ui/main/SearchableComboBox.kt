@@ -20,6 +20,9 @@ fun <T> SearchableComboBox(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     onClear: (() -> Unit)? = null,
+    colors: TextFieldColors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+    dropdownMenuModifier: Modifier = Modifier,
+    dropdownMenuItemColors: MenuItemColors = MenuDefaults.itemColors()
 ) {
     var expanded by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -64,20 +67,16 @@ fun <T> SearchableComboBox(
                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                     }
                 },
-                colors = if (enabled) {
-                    ExposedDropdownMenuDefaults.outlinedTextFieldColors()
-                } else {
-                    ExposedDropdownMenuDefaults.outlinedTextFieldColors(
-                        disabledTextColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    )
-                }
+                colors = colors
             )
 
             if (expanded) {
                 ExposedDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
-                    modifier = Modifier.heightIn(max = 300.dp)
+                    modifier = Modifier
+                        .heightIn(max = 300.dp)
+                        .then(dropdownMenuModifier)
                 ) {
                     // Search field at the top of the dropdown
                     OutlinedTextField(
@@ -90,7 +89,8 @@ fun <T> SearchableComboBox(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
-                        singleLine = true
+                        singleLine = true,
+                        colors = colors
                     )
 
                     // Divider
@@ -105,7 +105,8 @@ fun <T> SearchableComboBox(
                                 expanded = false
                                 searchQuery = ""
                                 onQueryChanged("")
-                            }
+                            },
+                            colors = dropdownMenuItemColors
                         )
                     }
 
@@ -120,7 +121,8 @@ fun <T> SearchableComboBox(
                                 )
                             },
                             onClick = { },
-                            enabled = false
+                            enabled = false,
+                            colors = dropdownMenuItemColors
                         )
                     }
                 }
