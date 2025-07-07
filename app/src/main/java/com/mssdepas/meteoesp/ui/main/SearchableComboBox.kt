@@ -21,6 +21,7 @@ fun <T> SearchableComboBox(
     enabled: Boolean = true,
     onClear: (() -> Unit)? = null,
     colors: TextFieldColors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+    searchTextFieldColors: TextFieldColors = colors,
     dropdownMenuModifier: Modifier = Modifier,
     dropdownMenuItemColors: MenuItemColors = MenuDefaults.itemColors()
 ) {
@@ -90,7 +91,7 @@ fun <T> SearchableComboBox(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                         singleLine = true,
-                        colors = colors
+                        colors = searchTextFieldColors
                     )
 
                     // Divider

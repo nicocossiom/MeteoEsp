@@ -1,5 +1,6 @@
 package com.mssdepas.meteoesp.ui.main
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -35,7 +36,8 @@ fun AccountScreen(authViewModel: AuthViewModel) {
                 TextButton(onClick = { authViewModel.clearError() }) {
                     Text("OK")
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 
@@ -148,6 +150,12 @@ fun AccountScreen(authViewModel: AuthViewModel) {
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isLoading
                         ) {
+                            Icon(
+                                Icons.Default.Lock,
+                                contentDescription = null,
+                                modifier = Modifier.size(ButtonDefaults.IconSize)
+                            )
+                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                             Text("Cambiar Contraseña")
                         }
                     }
@@ -157,14 +165,26 @@ fun AccountScreen(authViewModel: AuthViewModel) {
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isLoading
                     ) {
+                        Icon(
+                            Icons.Default.AlternateEmail,
+                            contentDescription = null,
+                            modifier = Modifier.size(ButtonDefaults.IconSize)
+                        )
+                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                         Text("Cambiar Email")
                     }
 
-                    Button(
+                    FilledTonalButton(
                         onClick = { authViewModel.signOut() },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !isLoading
                     ) {
+                        Icon(
+                            Icons.Default.Logout,
+                            contentDescription = null,
+                            modifier = Modifier.size(ButtonDefaults.IconSize)
+                        )
+                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                         Text("Cerrar Sesión")
                     }
 
@@ -174,8 +194,15 @@ fun AccountScreen(authViewModel: AuthViewModel) {
                         enabled = !isLoading,
                         colors = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
-                        )
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
                     ) {
+                        Icon(
+                            Icons.Default.DeleteForever,
+                            contentDescription = null,
+                            modifier = Modifier.size(ButtonDefaults.IconSize)
+                        )
+                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                         Text("Eliminar Cuenta")
                     }
                 }
@@ -277,7 +304,8 @@ fun ChangePasswordDialog(
             ) {
                 Text("Cancelar")
             }
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
     )
 }
 
@@ -331,7 +359,8 @@ fun ChangeEmailDialog(
             ) {
                 Text("Cancelar")
             }
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
     )
 }
 
@@ -360,6 +389,7 @@ fun DeleteAccountDialog(
             TextButton(onClick = onDismiss) {
                 Text("Cancelar")
             }
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
     )
 }

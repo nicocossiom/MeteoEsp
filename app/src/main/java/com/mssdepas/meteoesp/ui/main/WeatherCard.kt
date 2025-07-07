@@ -133,7 +133,7 @@ private fun DailyForecastItem(dia: ProximoDia) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(
             text = dia.atributos?.fecha?.let { formatDate(it) } ?: "Día",

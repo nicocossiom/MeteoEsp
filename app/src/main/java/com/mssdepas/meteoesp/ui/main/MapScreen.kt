@@ -1,5 +1,7 @@
 package com.mssdepas.meteoesp.ui.main
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,6 +59,25 @@ fun MapScreen(vm: MainViewModel) {
         focusedContainerColor = Color.Transparent,
         unfocusedContainerColor = Color.Transparent,
         disabledContainerColor = Color.Transparent,
+        focusedIndicatorColor = MaterialTheme.colorScheme.primary,
+        unfocusedIndicatorColor = Color.Black.copy(alpha = 0.38f),
+        disabledIndicatorColor = Color.Black.copy(alpha = 0.12f),
+        focusedLabelColor = MaterialTheme.colorScheme.primary,
+        unfocusedLabelColor = Color.Black.copy(alpha = 0.6f),
+        disabledLabelColor = Color.Black.copy(alpha = 0.38f),
+        focusedTrailingIconColor = Color.Black.copy(alpha = 0.54f),
+        unfocusedTrailingIconColor = Color.Black.copy(alpha = 0.54f),
+        disabledTrailingIconColor = Color.Black.copy(alpha = 0.38f)
+    )
+
+    val searchTextFieldColors = TextFieldDefaults.colors(
+        focusedTextColor = Color.Black.copy(alpha = 0.87f),
+        unfocusedTextColor = Color.Black.copy(alpha = 0.87f),
+        disabledTextColor = Color.Black.copy(alpha = 0.38f),
+        cursorColor = MaterialTheme.colorScheme.primary,
+        focusedContainerColor = MaterialTheme.colorScheme.surface,
+        unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+        disabledContainerColor = MaterialTheme.colorScheme.surface,
         focusedIndicatorColor = MaterialTheme.colorScheme.primary,
         unfocusedIndicatorColor = Color.Black.copy(alpha = 0.38f),
         disabledIndicatorColor = Color.Black.copy(alpha = 0.12f),
@@ -134,7 +155,8 @@ fun MapScreen(vm: MainViewModel) {
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White
-                )
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -154,7 +176,10 @@ fun MapScreen(vm: MainViewModel) {
                         itemText = { it.nombre },
                         onClear = { vm.clearProvinciaSelection() },
                         colors = comboBoxColors,
-                        dropdownMenuModifier = Modifier.shadow(8.dp),
+                        searchTextFieldColors = searchTextFieldColors,
+                        dropdownMenuModifier = Modifier
+                            .background(MaterialTheme.colorScheme.surface)
+                            .shadow(8.dp),
                         dropdownMenuItemColors = dropdownMenuItemColors
                     )
 
@@ -168,7 +193,10 @@ fun MapScreen(vm: MainViewModel) {
                         enabled = selectedProvincia != null,
                         onClear = { vm.clearMunicipioSelection() },
                         colors = comboBoxColors,
-                        dropdownMenuModifier = Modifier.shadow(8.dp),
+                        searchTextFieldColors = searchTextFieldColors,
+                        dropdownMenuModifier = Modifier
+                            .background(MaterialTheme.colorScheme.surface)
+                            .shadow(8.dp),
                         dropdownMenuItemColors = dropdownMenuItemColors
                     )
                 }

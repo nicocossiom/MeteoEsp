@@ -31,5 +31,6 @@ fun WeatherDialog(
                 )
             )
         }
-    }
+    },
+    containerColor = MaterialTheme.colorScheme.surface
 )

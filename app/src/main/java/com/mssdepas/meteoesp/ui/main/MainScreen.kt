@@ -4,6 +4,7 @@ import android.Manifest
 import android.text.format.DateUtils
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -103,7 +104,8 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
                 }) {
                     Text("Reintentar")
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 
@@ -126,7 +128,8 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
                 TextButton(onClick = { showPermissionDialog = false }) {
                     Text("Ahora no")
                 }
-            }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 
@@ -172,8 +175,9 @@ fun MainScreen(vm: MainViewModel, authViewModel: AuthViewModel) {
                     modifier = Modifier.fillMaxWidth(),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                    )
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -267,8 +271,9 @@ private fun FavoritesSection(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // Header with manage button
@@ -400,8 +405,9 @@ private fun CurrentLocationSection(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-        )
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
